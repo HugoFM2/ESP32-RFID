@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <title> status</title>
+    </head>
+    <style>
+        table {{
+            border: 1px solid black;
+            border-collapse: collapse;
+        }}
+        td, th {{
+            border: 1px solid #dddddd;
+            padding: 8px;
+        }}
+        </style>
+    <body>
+        <h1>RFID status</h1>
+        <table id="TabelaCartoes">
+            <tr>
+                <th>UID</th>
+                <th>Comandos</th>
+            </tr>
+        </table>
+        <br><br>
+        <form action="/adicionarCartao">
+            <label for="addCartao">Adicionar Cartao:</label>
+            <input type="text" id="addCartao" name="addCartao">
+            <input type="submit" value="Submit">
+        </form>
+        <p> Ultimo cartao lido: {uid}</p>
+    </body>
+    <script>
+        let cartoes = {cartoes};
+        for (const [index,cartao] of cartoes.entries()){{
+            var table = document.getElementById("TabelaCartoes");
+            var row = table.insertRow(-1);
+            var cell1 = row.insertCell(-1);
+            var cell2 = row.insertCell(-1);
+            cell1.innerHTML = cartao;
+            cell2.innerHTML = '<a href="/removerCartao?i=' + index + '">Remover</a>';
+
+        }}
+    </script>
+</html>

@@ -2,7 +2,7 @@ from time import sleep_ms
 from machine import Pin, SPI,freq
 from lib.mfrc522 import MFRC522
 import uasyncio
-
+import json
 
 p2 = Pin(2, Pin.OUT)
 
@@ -19,7 +19,7 @@ miso = Pin(19, Pin.OUT)
 spi = SPI(baudrate=80000000, polarity=0, phase=0, sck=sck, mosi=mosi, miso=miso)
 
 sda = Pin(5, Pin.OUT)
-cartoesAprovados = ["8A:A9:11:D9","88:04:A6:A0"]
+config_json = json.load(open('config.json'))
 uid = ""
 lastUID = "XX:XX:XX:XX"
 
@@ -47,7 +47,7 @@ async def do_read():
             if(statusLeitor == STATUSRFID.DETECTADO):
                 print("CARTAO LIDO:",uid)
                 lastUID = uid
-                if uid in cartoesAprovados:
+                if uid in config_json['CartoesAprovados']:
                     print("CARTAO CORRETO")
                     p2.on()
                 else:
@@ -56,11 +56,14 @@ async def do_read():
             else:
                 p2.off()
                 print("Cartao Removido")
-        print("Terminou while cartao")
         await uasyncio.sleep(0.5)
                 
 
-
+#PARTE JSON
+def EscreverJSON(file,json_var):
+    print("Escrevendo no arquivo")
+    with open(file, 'w') as f:
+        json.dump(json_var, f)
 
 #Criando Rede
 import network
@@ -78,7 +81,7 @@ def do_connect():
     if not sta_if.isconnected():
         print('connecting to network...')
         sta_if.active(True)
-        sta_if.connect('Wesley ll', 'casanova@2021')
+        sta_if.connect('Casa', '74747474')
         while not sta_if.isconnected():
             pass
     print('network config:', sta_if.ifconfig())
@@ -93,7 +96,7 @@ import uasyncio
 naw = Nanoweb()
 
 async def indexhtml(request):
-    dicionario = {'cartoes': cartoesAprovados,'uid':lastUID}
+    dicionario = {'cartoes': config_json['CartoesAprovados'],'uid':lastUID}
     print("Pagina status carregando!")
     """API status endpoint"""
     # await send_file(request,"status.html")
@@ -113,8 +116,9 @@ async def DeletarCartaoHTML(request):
         for argumento in argumentos:
             aux = argumento.split('=')
             dicio[aux[0]] = aux[1]
-        cartoesAprovados.pop(int(dicio['i']))
-        await indexhtml(request)
+        config_json['CartoesAprovados'].pop(int(dicio['i']))
+        EscreverJSON('config.json',config_json)
+        await RedirectPage(request)
 
 async def AdicionarCartaoHTML(request):
     print("Carregando pagina AdicionarCartao")
@@ -124,18 +128,24 @@ async def AdicionarCartaoHTML(request):
         for argumento in argumentos:
             aux = argumento.split('=')
             dicio[aux[0]] = aux[1]
-        cartoesAprovados.append(dicio['addCartao'])
-        # await indexhtml(request)  
-        redirect = '<meta http-equiv="refresh" content="tempo em segundos; URL=\'/\'"/>'
-        await request.write("HTTP/1.1 200 OK\r\n")
-        await request.write(redirect)
+        config_json['CartoesAprovados'].append(dicio['addCartao'].replace("%3A",":"))
+        EscreverJSON('config.json',config_json)
+        await RedirectPage(request)
 # Declare route from a dict
+
+async def RedirectPage(request):
+    data = ""
+    with open("redirect.html", "r") as f:
+        for l in f:
+            data += l
+    await request.write(data)
 
 naw.routes = {
     '/'   : indexhtml,
     '/removerCartao*' : DeletarCartaoHTML,
     '/adicionarCartao*' : AdicionarCartaoHTML,
 }
+
 
 
 # uasyncio.create_task( do_read() )
@@ -151,7 +161,7 @@ async def main():
     uasyncio.create_task( naw.run())
     uasyncio.create_task( do_read() )
     while True:
-        print("passou")
+        # print("passou")
 
         await uasyncio.sleep(5)
 

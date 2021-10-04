@@ -1,29 +1,44 @@
 <!DOCTYPE html>
 <html>
+
     <head>
         <meta charset="utf-8"/>
         <title> status</title>
     </head>
     <style>
+        html {{
+            font-family: Helvetica;
+            display: inline-block;
+            margin: 0px auto;
+        }}
+        body {{
+            color: white;
+            background:#222;
+        }}
         table {{
-            border: 1px solid black;
+            border: 1px solid white;
             border-collapse: collapse;
         }}
         td, th {{
             border: 1px solid #dddddd;
             padding: 8px;
         }}
+        button{{
+            color:white;
+            background:#444;
+            border:.5ch solid #444;
+        }}
         </style>
-    <body>
+    <body style="text-align: center;">
         <h1>RFID status</h1>
-        <table id="TabelaCartoes">
+        <table id="TabelaCartoes" align="center">
             <tr>
                 <th>UID</th>
                 <th>Comandos</th>
             </tr>
         </table>
         <br><br>
-        <form action="/adicionarCartao">
+        <form action="/adicionarCartao" autocomplete="off">
             <label for="addCartao">Adicionar Cartao:</label>
             <input type="text" id="addCartao" name="addCartao">
             <input type="submit" value="Submit">
@@ -38,7 +53,8 @@
             var cell1 = row.insertCell(-1);
             var cell2 = row.insertCell(-1);
             cell1.innerHTML = cartao;
-            cell2.innerHTML = '<a href="/removerCartao?i=' + index + '">Remover</a>';
+            // cell2.innerHTML = '<a href="/removerCartao?i=' + index + '">Remover</a>';
+            cell2.innerHTML = '<form action="/removerCartao"><button type="submit">Remover</button><input type="hidden" name="i" value="' + index + '" /></form>'
 
         }}
     </script>

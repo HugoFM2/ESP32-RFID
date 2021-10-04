@@ -1,5 +1,6 @@
 from machine import Pin, SPI
 from os import uname
+import time
 
 
 class MFRC522:
@@ -13,22 +14,45 @@ class MFRC522:
 	AUTHENT1A = 0x60
 	AUTHENT1B = 0x61
 
-	def __init__(self, spi, cs):
+	# def __init__(self, sck, mosi, miso, rst, cs):
+	def __init__(self, sck, mosi, miso, cs):
 
-		self.spi = spi
-		self.cs = cs
+		# self.sck = Pin(sck, Pin.OUT)
+		# self.mosi = Pin(mosi, Pin.OUT)
+		# self.miso = Pin(miso)
+		# self.rst = Pin(rst, Pin.OUT)
+		self.cs = Pin(cs, Pin.OUT)
+
+		# self.rst.value(0)
 		self.cs.value(1)
-		self.spi.init()
+		
+		board = uname()[0]
+
+		if board == 'WiPy' or board == 'LoPy' or board == 'FiPy':
+			self.spi = SPI(0)
+			self.spi.init(SPI.MASTER, baudrate=1000000, pins=(self.sck, self.mosi, self.miso))
+		elif board == 'esp8266':
+			# self.spi = SPI(baudrate=100000, polarity=0, phase=0, sck=self.sck, mosi=self.mosi, miso=self.miso)
+			self.spi = SPI(1,1000000, polarity=0, phase=0) # Usando Hardware SPI
+			self.spi.init()
+		elif board == 'esp32':
+			# self.spi = SPI(baudrate=100000, polarity=0, phase=0, sck=self.sck, mosi=self.mosi, miso=self.miso)
+			self.spi = SPI(2,1000000, polarity=0, phase=0, sck=Pin(sck), mosi=Pin(mosi), miso=Pin(miso)) # Usando Hardware SPI
+			self.spi.init()
+		else:
+			raise RuntimeError("Unsupported platform")
+
+		# self.rst.value(1)
 		self.init()
 
-	def _wreg(self, reg, val): # Write MFRC522
+	def _wreg(self, reg, val):
 
 		self.cs.value(0)
 		self.spi.write(b'%c' % int(0xff & ((reg << 1) & 0x7e)))
 		self.spi.write(b'%c' % int(0xff & val))
 		self.cs.value(1)
 
-	def _rreg(self, reg): # Read MFRC522
+	def _rreg(self, reg):
 
 		self.cs.value(0)
 		self.spi.write(b'%c' % int(0xff & (((reg << 1) & 0x7e) | 0x80)))
@@ -43,22 +67,22 @@ class MFRC522:
 	def _cflags(self, reg, mask):
 		self._wreg(reg, self._rreg(reg) & (~mask))
 
-	def _tocard(self, cmd, send): #mfrc522_Tocard
+	def _tocard(self, cmd, send):
 
 		recv = []
 		bits = irq_en = wait_irq = n = 0
 		stat = self.ERR
 
-		if cmd == 0x0E: # PCD AUTHENT
+		if cmd == 0x0E:
 			irq_en = 0x12
 			wait_irq = 0x10
 		elif cmd == 0x0C:
 			irq_en = 0x77
 			wait_irq = 0x30
 
-		self._wreg(0x02, irq_en | 0x80) # Write CommIEnReg, irqen 
-		self._cflags(0x04, 0x80) # ClearBitMask // 0x04 = CommIrqReg
-		self._sflags(0x0A, 0x80) # SetBitMask // 0x0a = FIFOLevelReg
+		self._wreg(0x02, irq_en | 0x80)
+		self._cflags(0x04, 0x80)
+		self._sflags(0x0A, 0x80)
 		self._wreg(0x01, 0x00)
 
 		for c in send:
@@ -68,12 +92,22 @@ class MFRC522:
 		if cmd == 0x0C:
 			self._sflags(0x0D, 0x80)
 
-		i = 2000
+		i = 50 # CALCULAR COMO 25  ms
+		# startTime = time.ticks_ms()
 		while True:
-			n = self._rreg(0x04)
+			# n = self._rreg(0x04)
+			#RREG
+			self.cs.value(0)
+			self.spi.write(b'%c' % int(0xff & (((0x04 << 1) & 0x7e) | 0x80)))
+			val = self.spi.read(1)
+			self.cs.value(1)
+			n = val[0]
+			#Fim RREG
+
 			i -= 1
 			if ~((i != 0) and ~(n & 0x01) and ~(n & wait_irq)):
 				break
+		# print("TEMPO LOOP: {}".format(time.ticks_ms()-startTime))
 
 		self._cflags(0x0D, 0x80)
 
@@ -103,7 +137,7 @@ class MFRC522:
 
 		return stat, recv, bits
 
-	def _crc(self, data): # Calculate CRC
+	def _crc(self, data):
 
 		self._cflags(0x05, 0x04)
 		self._sflags(0x0A, 0x80)

@@ -33,6 +33,7 @@
         <h1>RFID status</h1>
         <table id="TabelaCartoes" align="center">
             <tr>
+                <th>Index</th>
                 <th>UID</th>
                 <th>Comandos</th>
             </tr>
@@ -50,8 +51,10 @@
         for (const [index,cartao] of cartoes.entries()){{
             var table = document.getElementById("TabelaCartoes");
             var row = table.insertRow(-1);
+            var cell0 = row.insertCell(-1);
             var cell1 = row.insertCell(-1);
             var cell2 = row.insertCell(-1);
+            cell0.innerHTML= index
             cell1.innerHTML = cartao;
             // cell2.innerHTML = '<a href="/removerCartao?i=' + index + '">Remover</a>';
             cell2.innerHTML = '<form action="/removerCartao"><button type="submit">Remover</button><input type="hidden" name="i" value="' + index + '" /></form>'
